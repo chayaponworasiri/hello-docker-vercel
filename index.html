@@ -3,37 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World with Image</title>
-    <style>
-        body {
-            margin: 0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        .image-container img {
-            max-width: 300px;
-            height: auto;
-            border-radius: 10px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-        }
-    </style>
+    <title>Bill Management System</title>
+    <!-- Tailwind CSS สำหรับตกแต่งหน้าเว็บให้สวยงาม -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
-    <h1>Hello World</h1>
-    <div class="image-container">
-        <!-- เรียกใช้รูปภาพตาม path ที่ต้องการ -->
-        <img src="src/bu.jpg" alt="BU Image">
+<body class="bg-gray-50 min-h-screen p-6">
+
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">ระบบจัดการข้อมูลบิล (Docker + Vercel + Supabase)</h1>
+
+        <!-- ส่วนของปุ่มเพิ่มข้อมูล (แสดงเมื่อไม่มีข้อมูล) -->
+        <div id="empty-state" class="hidden text-center py-16 bg-white rounded-xl shadow-md p-8">
+            <p class="text-gray-500 text-lg mb-4">ยังไม่มีข้อมูลในระบบ</p>
+            <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg shadow transition">
+                + เพิ่มข้อมูลแรก
+            </button>
+        </div>
+
+        <!-- ส่วนของตารางข้อมูล (แสดงเมื่อมีข้อมูล) -->
+        <div id="data-state" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">รายการข้อมูลทั้งหมด</h2>
+                <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg shadow transition">
+                    + เพิ่มข้อมูลใหม่
+                </button>
+            </div>
+            <div class="bg-white rounded-xl shadow-md overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 border-b text-gray-600 text-sm">
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Bill Header</th>
+                            <th class="p-3">Applicant Name</th>
+                            <th class="p-3">Custodian Name</th>
+                            <th class="p-3">Phone Number</th>
+                            <th class="p-3">Fish Count</th>
+                            <th class="p-3 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y text-gray-700 text-sm">
+                        <!-- ข้อมูลจะถูกแทรกเข้ามาตรงนี้ด้วย JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
+
+    <!-- Modal ฟอร์มสำหรับ เพิ่ม / แก้ไข ข้อมูล -->
+    <div id="form-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center p-4">
+        <div class="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
+            <h2 id="modal-title" class="text-xl font-bold text-gray-800 mb-4">เพิ่มข้อมูลใหม่</h2>
+            <form id="bill-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">ID*</label>
+                    <input type="text" id="inputId" required class="mt-1 w-full p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Bill Header</label>
+                    <input type="text" id="inputBillHeader" class="mt-1 w-full p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Applicant Name</label>
+                    <input type="text" id="inputApplicantName" class="mt-1 w-full p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Custodian Name</label>
+                    <input type="text" id="inputCustodianName" class="mt-1 w-full p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="text" id="inputPhoneNumber" class="mt-1 w-full p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fish Count</label>
+                    <input type="number" id="inputFishCount" class="mt-1 w-full p-2 border rounded-lg focus:ring focus:ring-blue-300">
+                </div>
+                <div class="flex justify-end space-x-3 pt-2">
+                    <button type="button" onclick="closeModal()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition">ยกเลิก</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script เชื่อมต่อ Supabase และจัดการระบบ CRUD -->
+    <script>
+        // ใส่ค่า Supabase URL และ Anon Key ของคุณตรงนี้
+        const SUPABASE_URL = 'https://qyedsecbjjuinjzfzxdb.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5ZWRzZWNiamp1aW5qemZ6eGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MDgwNTgsImV4cCI6MjEwNTQ4NDA1OH0.T0E9M1G5pt37I9jPStWsSvgjj2C6t1LQ4RjBR2Snfys';
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let isEditing = false;
+
+        async function fetchBills() {
+            const { data, error } = await supabaseClient.from('bills').select('*');
+            if (error) {
+                console.error('Error fetching data:', error);
+                return;
+            }
+
+            const emptyState = document.getElementById('empty-state');
+            const dataState = document.getElementById('data-state');
+            const tableBody = document.getElementById('table-body');
+
+            if (data.length === 0) {
+                emptyState.classList.remove('hidden');
+                dataState.classList.add('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                dataState.classList.remove('hidden');
+                
+                tableBody.innerHTML = '';
+                data.forEach(item => {
+                    tableBody.innerHTML += `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="p-3 font-medium">${item.id}</td>
+                            <td class="p-3">${item.billHeader || '-'}</td>
+                            <td class="p-3">${item.applicantName || '-'}</td>
+                            <td class="p-3">${item.custodianName || '-'}</td>
+                            <td class="p-3">${item.phoneNumber || '-'}</td>
+                            <td class="p-3">${item.fishCount || 0}</td>
+                            <td class="p-3 text-center space-x-2">
+                                <button onclick="editBill('${item.id}', '${item.billHeader}', '${item.applicantName}', '${item.custodianName}', '${item.phoneNumber}', ${item.fishCount})" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs transition">แก้ไข</button>
+                                <button onclick="deleteBill('${item.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition">ลบ</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function openModal() {
+            isEditing = false;
+            document.getElementById('modal-title').innerText = 'เพิ่มข้อมูลใหม่';
+            document.getElementById('bill-form').reset();
+            document.getElementById('inputId').disabled = false;
+            document.getElementById('form-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('form-modal').classList.add('hidden');
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+            const id = document.getElementById('inputId').value;
+            const billHeader = document.getElementById('inputBillHeader').value;
+            const applicantName = document.getElementById('inputApplicantName').value;
+            const custodianName = document.getElementById('inputCustodianName').value;
+            const phoneNumber = document.getElementById('inputPhoneNumber').value;
+            const fishCount = parseInt(document.getElementById('inputFishCount').value) || 0;
+
+            if (isEditing) {
+                const { error } = await supabaseClient
+                    .from('bills')
+                    .update({ billHeader, applicantName, custodianName, phoneNumber, fishCount })
+                    .eq('id', id);
+                if (error) alert('Error updating: ' + error.message);
+            } else {
+                const { error } = await supabaseClient
+                    .from('bills')
+                    .insert([{ id, billHeader, applicantName, custodianName, phoneNumber, fishCount }]);
+                if (error) alert('Error inserting: ' + error.message);
+            }
+
+            closeModal();
+            fetchBills();
+        }
+
+        function editBill(id, billHeader, applicantName, custodianName, phoneNumber, fishCount) {
+            isEditing = true;
+            document.getElementById('modal-title').innerText = 'แก้ไขข้อมูล';
+            document.getElementById('inputId').value = id;
+            document.getElementById('inputId').disabled = true; // ล็อก ID ไม่ให้แก้ตอนอัปเดต
+            document.getElementById('inputBillHeader').value = billHeader === 'null' ? '' : billHeader;
+            document.getElementById('inputApplicantName').value = applicantName === 'null' ? '' : applicantName;
+            document.getElementById('inputCustodianName').value = custodianName === 'null' ? '' : custodianName;
+            document.getElementById('inputPhoneNumber').value = phoneNumber === 'null' ? '' : phoneNumber;
+            document.getElementById('inputFishCount').value = fishCount;
+            document.getElementById('form-modal').classList.remove('hidden');
+        }
+
+        async function deleteBill(id) {
+            if (confirm(`คุณต้องการลบข้อมูล ID: ${id} ใช่หรือไม่?`)) {
+                const { error } = await supabaseClient.from('bills').delete().eq('id', id);
+                if (error) alert('Error deleting: ' + error.message);
+                fetchBills();
+            }
+        }
+
+        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
+        fetchBills();
+    </script>
 </body>
 </html>
