@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill Management System</title>
-    <!-- Tailwind CSS สำหรับตกแต่งหน้าเว็บให้สวยงาม -->
+    <title>Bill Management with Google Sheet</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-50 min-h-screen p-6">
 
     <div class="max-w-6xl mx-auto">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">ระบบจัดการข้อมูลบิล (Docker + Vercel + Supabase)</h1>
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">ระบบจัดการข้อมูลบิล (Google Sheet Backend)</h1>
 
         <!-- ส่วนของปุ่มเพิ่มข้อมูล (แสดงเมื่อไม่มีข้อมูล) -->
         <div id="empty-state" class="hidden text-center py-16 bg-white rounded-xl shadow-md p-8">
@@ -44,14 +42,14 @@
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y text-gray-700 text-sm">
-                        <!-- ข้อมูลจะถูกแทรกเข้ามาตรงนี้ด้วย JavaScript -->
+                        <!-- ข้อมูลจะถูกแทรกที่นี่ -->
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Modal ฟอร์มสำหรับ เพิ่ม / แก้ไข ข้อมูล -->
+    <!-- Modal ฟอร์ม เพิ่ม/แก้ไข -->
     <div id="form-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex justify-center items-center p-4">
         <div class="bg-white rounded-xl shadow-lg max-w-lg w-full p-6">
             <h2 id="modal-title" class="text-xl font-bold text-gray-800 mb-4">เพิ่มข้อมูลใหม่</h2>
@@ -85,53 +83,51 @@
                     <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition">บันทึก</button>
                 </div>
             </form>
-        </div>  
+        </div>
     </div>
 
-    <!-- Script เชื่อมต่อ Supabase และจัดการระบบ CRUD -->
+    <!-- Script จัดการการเชื่อมต่อ Google Sheet -->
     <script>
-        // ใส่ค่า Supabase URL และ Anon Key ของคุณตรงนี้
-        const SUPABASE_URL = 'https://qyedsecbjjuinjzfzxdb.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5ZWRzZWNiamp1aW5qemZ6eGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MDgwNTgsImV4cCI6MjEwNTQ4NDA1OH0.T0E9M1G5pt37I9jPStWsSvgjj2C6t1LQ4RjBR2Snfys';
-        
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // เปลี่ยนใส่ Web App URL ของคุณที่นี่
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH0F7U5TEZd0Bqe6GsQz4pBO6xyv6XHFRlR5fYG5ElRYV8b-pkbiRItT60GuqDxEfMtQ/exec';
         let isEditing = false;
 
-        async function fetchDeposits() {
-            const { data, error } = await supabaseClient.from('Deposits').select('*');
-            if (error) {
+        async function fetchBills() {
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=read`);
+                const data = await response.json();
+
+                const emptyState = document.getElementById('empty-state');
+                const dataState = document.getElementById('data-state');
+                const tableBody = document.getElementById('table-body');
+
+                if (!data || data.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    dataState.classList.add('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    dataState.classList.remove('hidden');
+                    
+                    tableBody.innerHTML = '';
+                    data.forEach(item => {
+                        tableBody.innerHTML += `
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="p-3 font-medium">${item.id || ''}</td>
+                                <td class="p-3">${item.billHeader || '-'}</td>
+                                <td class="p-3">${item.applicantName || '-'}</td>
+                                <td class="p-3">${item.custodianName || '-'}</td>
+                                <td class="p-3">${item.phoneNumber || '-'}</td>
+                                <td class="p-3">${item.fishCount || 0}</td>
+                                <td class="p-3 text-center space-x-2">
+                                    <button onclick="editBill('${item.id}', '${item.billHeader}', '${item.applicantName}', '${item.custodianName}', '${item.phoneNumber}', ${item.fishCount})" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs transition">แก้ไข</button>
+                                    <button onclick="deleteBill('${item.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition">ลบ</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch (error) {
                 console.error('Error fetching data:', error);
-                return;
-            }
-
-            const emptyState = document.getElementById('empty-state');
-            const dataState = document.getElementById('data-state');
-            const tableBody = document.getElementById('table-body');
-
-            if (data.length === 0) {
-                emptyState.classList.remove('hidden');
-                dataState.classList.add('hidden');
-            } else {
-                emptyState.classList.add('hidden');
-                dataState.classList.remove('hidden');
-                
-                tableBody.innerHTML = '';
-                data.forEach(item => {
-                    tableBody.innerHTML += `
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3 font-medium">${item.id}</td>
-                            <td class="p-3">${item.billHeader || '-'}</td>
-                            <td class="p-3">${item.applicantName || '-'}</td>
-                            <td class="p-3">${item.custodianName || '-'}</td>
-                            <td class="p-3">${item.phoneNumber || '-'}</td>
-                            <td class="p-3">${item.fishCount || 0}</td>
-                            <td class="p-3 text-center space-x-2">
-                                <button onclick="editBill('${item.id}', '${item.billHeader}', '${item.applicantName}', '${item.custodianName}', '${item.phoneNumber}', ${item.fishCount})" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-xs transition">แก้ไข</button>
-                                <button onclick="deleteBill('${item.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs transition">ลบ</button>
-                            </td>
-                        </tr>
-                    `;
-                });
             }
         }
 
@@ -156,21 +152,32 @@
             const phoneNumber = document.getElementById('inputPhoneNumber').value;
             const fishCount = parseInt(document.getElementById('inputFishCount').value) || 0;
 
-            if (isEditing) {
-                const { error } = await supabaseClient
-                    .from('Deposits')
-                    .update({ billHeader, applicantName, custodianName, phoneNumber, fishCount })
-                    .eq('id', id);
-                if (error) alert('Error updating: ' + error.message);
-            } else {
-                const { error } = await supabaseClient
-                    .from('Deposits')
-                    .insert([{ id, billHeader, applicantName, custodianName, phoneNumber, fishCount }]);
-                if (error) alert('Error inserting: ' + error.message);
+            const payload = {
+                action: isEditing ? 'update' : 'create',
+                id,
+                billHeader,
+                applicantName,
+                custodianName,
+                phoneNumber,
+                fishCount
+            };
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status !== 'success') {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
             }
 
             closeModal();
-            fetchDeposits();
+            fetchBills();
         }
 
         function editBill(id, billHeader, applicantName, custodianName, phoneNumber, fishCount) {
@@ -178,24 +185,35 @@
             document.getElementById('modal-title').innerText = 'แก้ไขข้อมูล';
             document.getElementById('inputId').value = id;
             document.getElementById('inputId').disabled = true; // ล็อก ID ไม่ให้แก้ตอนอัปเดต
-            document.getElementById('inputBillHeader').value = billHeader === 'null' ? '' : billHeader;
-            document.getElementById('inputApplicantName').value = applicantName === 'null' ? '' : applicantName;
-            document.getElementById('inputCustodianName').value = custodianName === 'null' ? '' : custodianName;
-            document.getElementById('inputPhoneNumber').value = phoneNumber === 'null' ? '' : phoneNumber;
+            document.getElementById('inputBillHeader').value = billHeader === 'undefined' ? '' : billHeader;
+            document.getElementById('inputApplicantName').value = applicantName === 'undefined' ? '' : applicantName;
+            document.getElementById('inputCustodianName').value = custodianName === 'undefined' ? '' : custodianName;
+            document.getElementById('inputPhoneNumber').value = phoneNumber === 'undefined' ? '' : phoneNumber;
             document.getElementById('inputFishCount').value = fishCount;
             document.getElementById('form-modal').classList.remove('hidden');
         }
 
         async function deleteBill(id) {
             if (confirm(`คุณต้องการลบข้อมูล ID: ${id} ใช่หรือไม่?`)) {
-                const { error } = await supabaseClient.from('Deposits').delete().eq('id', id);
-                if (error) alert('Error deleting: ' + error.message);
-                fetchDeposits();
+                try {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'delete', id })
+                    });
+                    const result = await response.json();
+                    if (result.status !== 'success') {
+                        alert('Error: ' + result.message);
+                    }
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+                fetchBills();
             }
         }
 
-        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
-        fetchDeposits();
+        // โหลดข้อมูลเมื่อเปิดหน้าเว็บครั้งแรก
+        fetchBills();
     </script>
 </body>
 </html>
