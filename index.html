@@ -97,7 +97,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         let isEditing = false;
 
-        async function fetchBills() {
+        async function fetchDeposits() {
             const { data, error } = await supabaseClient.from('Deposits').select('*');
             if (error) {
                 console.error('Error fetching data:', error);
@@ -158,19 +158,19 @@
 
             if (isEditing) {
                 const { error } = await supabaseClient
-                    .from('bills')
+                    .from('Deposits')
                     .update({ billHeader, applicantName, custodianName, phoneNumber, fishCount })
                     .eq('id', id);
                 if (error) alert('Error updating: ' + error.message);
             } else {
                 const { error } = await supabaseClient
-                    .from('bills')
+                    .from('Deposits')
                     .insert([{ id, billHeader, applicantName, custodianName, phoneNumber, fishCount }]);
                 if (error) alert('Error inserting: ' + error.message);
             }
 
             closeModal();
-            fetchBills();
+            fetchDeposits();
         }
 
         function editBill(id, billHeader, applicantName, custodianName, phoneNumber, fishCount) {
@@ -188,14 +188,14 @@
 
         async function deleteBill(id) {
             if (confirm(`คุณต้องการลบข้อมูล ID: ${id} ใช่หรือไม่?`)) {
-                const { error } = await supabaseClient.from('bills').delete().eq('id', id);
+                const { error } = await supabaseClient.from('Deposits').delete().eq('id', id);
                 if (error) alert('Error deleting: ' + error.message);
-                fetchBills();
+                fetchDeposits();
             }
         }
 
         // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
-        fetchBills();
+        fetchDeposits();
     </script>
 </body>
 </html>
