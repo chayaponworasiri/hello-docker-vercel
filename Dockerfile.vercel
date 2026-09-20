@@ -2,6 +2,6 @@ FROM nginx:alpine
 
 # คัดลอกไฟล์ index.html ไปไว้ในโฟลเดอร์ที่ Nginx ใช้รันเว็บ
 COPY index.html /usr/share/nginx/html/index.html
-
+COPY src/ /usr/share/nginx/html/src/
 # เปิดพอร์ต 80 ตามค่ามาตรฐานที่ Vercel รองรับ
 EXPOSE 80
